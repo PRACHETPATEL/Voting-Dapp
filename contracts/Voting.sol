@@ -1,0 +1,175 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+contract Voting {
+    struct Candidate {
+        string name;
+        string party;
+        uint256 votes;
+        uint256 id;
+        bool exists; // Added to track if a candidate exists
+    }
+
+    struct Voter {
+        string name;
+        string aadharnumber;
+        string voteridnumber;
+        bool hasVoted;
+        bool authorized;
+        bool exists; // Added to track if a voter exists
+    }
+
+    mapping(uint256 => Candidate) public candidates;
+    mapping(address => bool) public hasVoted;
+    mapping(address => bool) public authorizedVoters;
+    mapping(address => Voter) public voters;
+
+    uint256 public candidateCount;
+    uint256 public voterCount;
+    address private admin;
+
+    constructor(string[][] memory candidateNames) {
+        admin = msg.sender;
+        for (uint256 i = 0; i < candidateNames.length; i++) {
+            addCandidate(candidateNames[i][0], candidateNames[i][1]);
+        }
+    }
+
+    function isAdmin(address check) public view returns (bool) {
+        return check == admin;
+    }
+
+    function isVoter() public view returns (bool) {
+        return voters[msg.sender].exists;
+    }
+
+    function addCandidate(string memory name, string memory party) public {
+        require(bytes(name).length > 0, "Candidate name cannot be empty");
+        require(bytes(party).length > 0, "Party name cannot be empty");
+
+        candidates[candidateCount] = Candidate(name, party, 0,candidateCount, true); // Mark candidate as existing
+        candidateCount++;
+    }
+
+    function addVoter(
+        string memory name,
+        string memory aadharnumber,
+        string memory voteridnumber
+    ) public {
+        require(!isVoter(), "You are already registered as Voter");
+        require(bytes(name).length > 0, "Voter name cannot be empty");
+        require(
+            bytes(aadharnumber).length > 0,
+            "Aadhar number cannot be empty"
+        );
+        require(bytes(voteridnumber).length > 0, "Voter ID cannot be empty");
+
+        voters[msg.sender] = Voter(
+            name,
+            aadharnumber,
+            voteridnumber,
+            false,
+            false,
+            true
+        ); // Mark voter as existing
+        voterCount++;
+    }
+
+    function authorizeVoter(address voter) public {
+        require(isAdmin(msg.sender), "Only admin can authorize voters");
+        require(voters[voter].exists, "Voter does not exist");
+
+        authorizedVoters[voter] = true;
+        voters[voter].authorized = true;
+    }
+
+    function revokeVoter(address voter) public {
+        require(isAdmin(msg.sender), "Only admin can revoke voter");
+        require(voters[voter].exists, "Voter does not exist");
+
+        authorizedVoters[voter] = false;
+        voters[voter].authorized = false;
+    }
+
+    function vote(uint256 candidateId) public {
+        require(isVoter(), "You are not registered as Voter");
+        require(
+            voters[msg.sender].authorized,
+            "You are not authorized to vote!"
+        );
+        require(!voters[msg.sender].hasVoted, "You have already voted!");
+        require(candidateId < candidateCount, "Invalid candidate ID");
+        require(candidates[candidateId].exists, "Candidate does not exist");
+
+        candidates[candidateId].votes += 1;
+        voters[msg.sender].hasVoted = true;
+    }
+
+    function totalVotesFor(uint256 candidateId) public view returns (uint256) {
+        require(candidateId < candidateCount, "Invalid candidate ID");
+        require(candidates[candidateId].exists, "Candidate does not exist");
+
+        return candidates[candidateId].votes;
+    }
+
+    function updateCandidateName(
+        uint256 candidateId,
+        string memory newName
+    ) public {
+        require(candidateId < candidateCount, "Invalid candidate ID");
+        require(candidates[candidateId].exists, "Candidate does not exist");
+        require(bytes(newName).length > 0, "New name cannot be empty");
+
+        candidates[candidateId].name = newName;
+    }
+
+    function updateCandidateParty(
+        uint256 candidateId,
+        string memory newParty
+    ) public {
+        require(candidateId < candidateCount, "Invalid candidate ID");
+        require(candidates[candidateId].exists, "Candidate does not exist");
+        require(bytes(newParty).length > 0, "New party cannot be empty");
+
+        candidates[candidateId].party = newParty;
+    }
+
+    function removeCandidate(uint256 candidateId) public {
+        require(candidateId < candidateCount, "Invalid candidate ID");
+        require(candidates[candidateId].exists, "Candidate does not exist");
+
+        delete candidates[candidateId];
+    }
+    function removeVoter(address voter) public {
+        require(isAdmin(msg.sender), "Only admin can remove voters");
+        require(voters[voter].exists, "Voter does not exist");
+        delete voters[voter];
+    }
+    function getAllCandidates() public view returns (Candidate[] memory) {
+        Candidate[] memory result = new Candidate[](candidateCount);
+        uint256 resultIndex = 0;
+
+        for (uint256 i = 0; i < candidateCount; i++) {
+            if (candidates[i].exists) {
+                result[resultIndex] = candidates[i];
+                resultIndex++;
+            }
+        }
+
+        return result;
+    }
+    function getAllVoters() public view returns (Voter[] memory) {
+        Voter[] memory result = new Voter[](voterAddresses.length);
+        uint256 resultIndex = 0;
+
+        for (uint256 i = 0; i < voterAddresses.length; i++) {
+            address voterAddress = voterAddresses[i];
+            if (voters[voterAddress].exists) {
+                result[resultIndex] = voters[voterAddress];
+                resultIndex++;
+            }
+        }
+
+        return result;
+    }
+}
