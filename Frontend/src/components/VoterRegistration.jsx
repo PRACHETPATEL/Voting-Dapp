@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import contract from "../hooks/web3";
-
+import { useNavigate } from "react-router-dom";
 function VoterRegistration() {
   const [currentAccount, setCurrentAccount] = useState(null);
   const [name, setName] = useState("");
@@ -8,7 +8,7 @@ function VoterRegistration() {
   const [voterID, setVoterID] = useState("");
   const [errors, setErrors] = useState({ name: "", aadhar: "", voterID: "" });
   const [successMessage, setSuccessMessage] = useState("");
-
+  const navigate=useNavigate();
   // Validate Aadhaar number (must be 12 digits)
   const validateAadhar = (aadhar) => {
     const aadhaarRegex = /^[0-9]{12}$/;
@@ -56,6 +56,9 @@ function VoterRegistration() {
         setVoterID("");
         setErrors({ name: "", aadhar: "", voterID: "" });
         setSuccessMessage("You successfully registered as voter Please wait for authorization.");
+        setTimeout(()=>{
+            navigate("/")
+        },2000)
       } catch (error) {
         console.error("Error registering voter:", error);
         setSuccessMessage("Error registering voter.");

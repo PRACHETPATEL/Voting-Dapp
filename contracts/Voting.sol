@@ -11,6 +11,7 @@ contract Voting {
     }
 
     struct Voter {
+        address id;
         string name;
         string aadharnumber;
         string voteridnumber;
@@ -23,6 +24,9 @@ contract Voting {
     mapping(address => bool) public hasVoted;
     mapping(address => bool) public authorizedVoters;
     mapping(address => Voter) public voters;
+
+    // Declare an array to store voter addresses
+    address[] public voterAddresses;
 
     uint256 public candidateCount;
     uint256 public voterCount;
@@ -47,7 +51,13 @@ contract Voting {
         require(bytes(name).length > 0, "Candidate name cannot be empty");
         require(bytes(party).length > 0, "Party name cannot be empty");
 
-        candidates[candidateCount] = Candidate(name, party, 0,candidateCount, true); // Mark candidate as existing
+        candidates[candidateCount] = Candidate(
+            name,
+            party,
+            0,
+            candidateCount,
+            true
+        ); // Mark candidate as existing
         candidateCount++;
     }
 
@@ -65,6 +75,7 @@ contract Voting {
         require(bytes(voteridnumber).length > 0, "Voter ID cannot be empty");
 
         voters[msg.sender] = Voter(
+            msg.sender,
             name,
             aadharnumber,
             voteridnumber,
@@ -72,6 +83,10 @@ contract Voting {
             false,
             true
         ); // Mark voter as existing
+
+        // Add the voter's address to the array
+        voterAddresses.push(msg.sender);
+
         voterCount++;
     }
 
@@ -140,11 +155,37 @@ contract Voting {
 
         delete candidates[candidateId];
     }
+    function removeByValue(address value) public {
+        for (uint i = 0; i < voterAddresses.length; i++) {
+            if (voterAddresses[i] == value) {
+                // Shift elements to the left
+                for (uint j = i; j < voterAddresses.length - 1; j++) {
+                    voterAddresses[j] = voterAddresses[j + 1];
+                }
+                // Remove the last element
+                voterAddresses.pop();
+                return; // Exit after removing the first found instance
+            }
+        }
+        revert("Value not found in the array");
+    }
     function removeVoter(address voter) public {
         require(isAdmin(msg.sender), "Only admin can remove voters");
         require(voters[voter].exists, "Voter does not exist");
+
+        // Remove the voter's address from the voterAddresses array
+        removeByValue(voter);
+
+        // Delete the voter's record from the mapping
         delete voters[voter];
     }
+    // function removeVoter(address voter) public {
+    //     require(isAdmin(msg.sender), "Only admin can remove voters");
+    //     require(voters[voter].exists, "Voter does not exist");
+    //     // delete voterAddresses.;
+    //     delete voters[voter];
+    // }
+
     function getAllCandidates() public view returns (Candidate[] memory) {
         Candidate[] memory result = new Candidate[](candidateCount);
         uint256 resultIndex = 0;
@@ -158,6 +199,8 @@ contract Voting {
 
         return result;
     }
+
+    // Implementing the getAllVoters function
     function getAllVoters() public view returns (Voter[] memory) {
         Voter[] memory result = new Voter[](voterAddresses.length);
         uint256 resultIndex = 0;

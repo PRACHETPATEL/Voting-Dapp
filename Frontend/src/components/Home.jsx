@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import contract from "../hooks/web3";
 import CandidateDetails from "./CandidateDetails";
 
@@ -12,6 +13,7 @@ function Home() {
   });
   const [candidates, setCandidates] = useState([]);
 
+  let navigate = useNavigate();
   const fetchCandidates = async () => {
     try {
       const candidates = await contract.methods.getAllCandidates().call();
@@ -25,8 +27,18 @@ function Home() {
     const accounts = await window.ethereum.request({
       method: "eth_requestAccounts",
     });
-    const validate = await contract.methods.isVoter(accounts[0]).call();
     setCurrentAccount(accounts[0]);
+    const validate = await contract.methods
+      .isVoter()
+      .call({ from: accounts[0] });
+    return validate;
+  };
+  let admin = async () => {
+    const accounts = await window.ethereum.request({
+      method: "eth_requestAccounts",
+    });
+    setCurrentAccount(accounts[0]);
+    const validate = await contract.methods.isAdmin(accounts[0]).call();
     return validate;
   };
   useEffect(() => {
@@ -36,17 +48,37 @@ function Home() {
           method: "eth_requestAccounts",
         });
         setCurrentAccount(accounts[0]);
-
         const fetchedCandidates = await fetchCandidates();
         setCandidates(fetchedCandidates);
       } catch (error) {
         console.error("Error connecting to MetaMask:", error);
       }
     };
+    admin()?.then((value) => {
+      if (value) {
+        navigate("/admin");
+      } else {
+        voter()?.then((value) => {
+          if (!value) {
+            navigate("/registervoter");
+          }
+        });
+      }
+    });
 
     init();
-
     window.ethereum?.on("accountsChanged", (accounts) => {
+      admin()?.then((value) => {
+        if (value) {
+          navigate("/admin");
+        } else {
+          voter()?.then((value) => {
+            if (!value) {
+              navigate("/registervoter");
+            }
+          });
+        }
+      });
       setCurrentAccount(accounts[0]);
     });
 
@@ -58,7 +90,10 @@ function Home() {
   return (
     <div className="container">
       <h1 className="text-center text-success">Decentralized Voting System</h1>
-      <h3>Your Account Number: <span className="text-primary">{currentAccount}</span></h3>
+      <h3>
+        Your Account Number:{" "}
+        <span className="text-primary">{currentAccount}</span>
+      </h3>
       <CandidateDetails candidates={candidates} />
 
       <div className="row g-3 align-items-center">
@@ -121,7 +156,7 @@ function Home() {
                     className: "alert-danger",
                     message: "You are not authorized to vote!",
                   });
-                }  else if (
+                } else if (
                   errorMessage?.innerError?.message.includes(
                     "You are not registered as Voter"
                   )
@@ -131,7 +166,7 @@ function Home() {
                     className: "alert-danger",
                     message: "You are not registered as Voter!",
                   });
-                }else {
+                } else {
                   setAlert({
                     show: true,
 
@@ -148,7 +183,7 @@ function Home() {
           </button>
         </div>
         {alert.show && (
-          <div className={"alert "+alert.className}>{alert.message}</div>
+          <div className={"alert " + alert.className}>{alert.message}</div>
         )}
       </div>
     </div>

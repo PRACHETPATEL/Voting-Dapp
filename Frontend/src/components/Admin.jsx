@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import contract from "../hooks/web3";
-
+import { useNavigate } from "react-router-dom";
 function Admin() {
   const [isadmin, setisadmin] = useState(false);
   const [currentAccount, setCurrentAccount] = useState(null);
@@ -10,7 +10,7 @@ function Admin() {
   const [candidateNewName, setCandidateNewName] = useState("");
   const [candidateNewParty, setCandidateNewParty] = useState("");
   const [voterAddress, setVoterAddress] = useState(""); // State for voter address
-
+  const navigate = useNavigate();
   let admin = async () => {
     const accounts = await window.ethereum.request({
       method: "eth_requestAccounts",
@@ -19,18 +19,43 @@ function Admin() {
     setCurrentAccount(accounts[0]);
     return validate;
   };
-
+  const [voters, setVoters] = useState([]);
+  const fetchVoters = async () => {
+    try {
+      const voters = await contract.methods.getAllVoters().call();
+      return voters;
+    } catch (error) {
+      console.error("Error fetching candidates:", error);
+      return [];
+    }
+  };
+  const setAuthorizedVoters=async ()=>{
+    const fetchedVoters = await fetchVoters();
+    setVoters(fetchedVoters.filter((voter) => (!voter.authorized && voter.exists)));
+    console.log(fetchedVoters.filter((voter) => (!voter.authorized)));
+  }
   useEffect(() => {
-    admin()?.then((value) => {
+    admin()?.then( (value) => {
       console.log(value);
       setisadmin(value);
+      setAuthorizedVoters();
+      if (!value) {
+        alert("You Are Not Authorized");
+        navigate("/");
+      }
     });
     window.ethereum?.on("accountsChanged", (accounts) => {
       admin()?.then((value) => {
         console.log(value);
         setisadmin(value);
+        if (!value) {
+          navigate("/");
+        }
       });
     });
+    return () => {
+      window.ethereum?.removeListener("accountsChanged", () => {});
+    };
   }, []);
 
   if (isadmin) {
@@ -292,7 +317,7 @@ function Admin() {
                 onClick={async () => {
                   if (voterAddress !== "") {
                     await contract.methods
-                      .revokeVoter(voterAddress)
+                      .removeVoter(voterAddress)
                       .send({ from: currentAccount });
                     setVoterAddress("");
                   } else {
@@ -305,6 +330,65 @@ function Admin() {
             </div>
           </form>
         </div>
+        {voters.length > 0 && (
+          <>
+            <h3>Pending Request</h3>
+            <table className="table table-striped my-3">
+              <thead>
+                <tr>
+                  <th>Voter Name</th>
+                  <th>hasVoted</th>
+                  <th>Authorize Voting Rights</th>
+                  <th>Revoke Voting Rights</th>
+                </tr>
+              </thead>
+              <tbody>
+                {voters?.map((voter, index) => {
+                  return (
+                    <tr key={voter.id}>
+                      <td>{voter.name}</td>
+                      <td>{String(voter.hasVoted)}</td>
+                      <td>
+                        <button
+                          type="button"
+                          className="btn btn-success"
+                          onClick={async () => {
+                            if (voter.id !== "") {
+                              await contract.methods
+                                .authorizeVoter(voter.id)
+                                .send({ from: currentAccount });
+                              setVoterAddress("");
+                              setAuthorizedVoters();
+                            }
+                          }}
+                        >
+                          Approve
+                        </button>
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          className="btn btn-danger"
+                          onClick={async () => {
+                            if (voter.id !== "") {
+                              await contract.methods
+                                .revokeVoter(voter.id)
+                                .send({ from: currentAccount });
+                              setVoterAddress("");
+                              setAuthorizedVoters();
+                            }
+                          }}
+                        >
+                          Revoke
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </>
+        )}
       </div>
     );
   } else {
