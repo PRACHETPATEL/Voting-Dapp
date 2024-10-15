@@ -88,11 +88,11 @@ function Home() {
   }, []);
 
   return (
-    <div className="container">
-      <h1 className="text-center text-success">Decentralized Voting System</h1>
+    <div className="container text-white ">
+      <h1 className="text-center py-3">Decentralized Voting System</h1>
       <h3>
         Your Account Number:{" "}
-        <span className="text-primary">{currentAccount}</span>
+        <span className="text-success">{currentAccount}</span>
       </h3>
       <CandidateDetails candidates={candidates} />
 

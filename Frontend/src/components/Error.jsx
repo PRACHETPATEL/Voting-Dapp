@@ -2,7 +2,7 @@ import React from 'react'
 
 function Error() {
   return (
-    <div>Something Went Wrong</div>
+    <div className='text-white text-center'>Something Went Wrong</div>
   )
 }
 

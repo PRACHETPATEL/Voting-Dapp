@@ -29,13 +29,13 @@ function Admin() {
       return [];
     }
   };
-  const setAuthorizedVoters=async ()=>{
+  const setAuthorizedVoters = async () => {
     const fetchedVoters = await fetchVoters();
     setVoters(fetchedVoters.filter((voter) => (!voter.authorized && voter.exists)));
     console.log(fetchedVoters.filter((voter) => (!voter.authorized)));
   }
   useEffect(() => {
-    admin()?.then( (value) => {
+    admin()?.then((value) => {
       console.log(value);
       setisadmin(value);
       setAuthorizedVoters();
@@ -54,13 +54,13 @@ function Admin() {
       });
     });
     return () => {
-      window.ethereum?.removeListener("accountsChanged", () => {});
+      window.ethereum?.removeListener("accountsChanged", () => { });
     };
   }, []);
 
   if (isadmin) {
     return (
-      <div className="container my-3">
+      <div className="container py-3 text-white">
         <div className="d-flex flex-column gap-3">
           <h1 className="text-center mb-2">Admin Panel</h1>
 
@@ -310,7 +310,7 @@ function Admin() {
                 required
               />
             </div>
-            <div className="col-auto">
+            <div className="col-auto d-flex gap-3">
               <button
                 type="button"
                 className="btn btn-danger"
@@ -320,6 +320,7 @@ function Admin() {
                       .removeVoter(voterAddress)
                       .send({ from: currentAccount });
                     setVoterAddress("");
+                    setAuthorizedVoters();
                   } else {
                     alert("Please fillout all the details!!");
                   }
@@ -327,28 +328,45 @@ function Admin() {
               >
                 Remove Voter
               </button>
+              <button
+                type="button"
+                className="btn btn-danger"
+                onClick={async () => {
+                  if (voterAddress !== "") {
+                    await contract.methods
+                      .revokeVoter(voterAddress)
+                      .send({ from: currentAccount });
+                    setVoterAddress("");
+                    setAuthorizedVoters();
+                  }
+                }}
+              >
+                Revoke Voter
+              </button>
             </div>
           </form>
         </div>
         {voters.length > 0 && (
           <>
-            <h3>Pending Request</h3>
-            <table className="table table-striped my-3">
+            <h3 className="mt-4">Pending Request</h3>
+            <table className="table table-dark table-striped table-hover table-responsive my-3">
               <thead>
                 <tr>
-                  <th>Voter Name</th>
-                  <th>hasVoted</th>
-                  <th>Authorize Voting Rights</th>
-                  <th>Revoke Voting Rights</th>
+                  <th className="col-3">Voter Address</th>
+                  <th className="col-3">Voter Name</th>
+                  <th className="col-3">hasVoted</th>
+                  <th className="col-3">Authorize Voting Rights</th>
+                  {/* <th>Revoke Voting Rights</th> */}
                 </tr>
               </thead>
               <tbody>
                 {voters?.map((voter, index) => {
                   return (
                     <tr key={voter.id}>
-                      <td>{voter.name}</td>
-                      <td>{String(voter.hasVoted)}</td>
-                      <td>
+                      <td className="align-content-center">{voter.id}</td>
+                      <td className="align-content-center">{voter.name}</td>
+                      <td className="align-content-center">{String(voter.hasVoted).toUpperCase()}</td>
+                      <td className="align-content-center">
                         <button
                           type="button"
                           className="btn btn-success"
@@ -365,7 +383,7 @@ function Admin() {
                           Approve
                         </button>
                       </td>
-                      <td>
+                      {/* <td>
                         <button
                           type="button"
                           className="btn btn-danger"
@@ -381,7 +399,7 @@ function Admin() {
                         >
                           Revoke
                         </button>
-                      </td>
+                      </td> */}
                     </tr>
                   );
                 })}
@@ -392,7 +410,7 @@ function Admin() {
       </div>
     );
   } else {
-    return <h4 className="text-center my-3">Not Authorized</h4>;
+    return <h4 className="text-center py-3">Not Authorized</h4>;
   }
 }
 

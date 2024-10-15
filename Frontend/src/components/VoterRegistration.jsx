@@ -84,7 +84,7 @@ function VoterRegistration() {
   }, []);
 
   return (
-    <div className="container my-3">
+    <div className="container text-white py-3">
       <h1 className="text-center mb-3">Voter Registration</h1>
       <form className="row g-3">
         <div className="col-12">
@@ -136,10 +136,10 @@ function VoterRegistration() {
           )}
         </div>
 
-        <div className="col-12">
+        <div className="col-12 text-center">
           <button
             type="button"
-            className="btn btn-primary"
+            className="btn btn-primary w-25 fw-bolder"
             onClick={registerVoter}
           >
             Register Voter
