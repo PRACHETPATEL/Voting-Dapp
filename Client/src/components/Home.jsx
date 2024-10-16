@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import contract from "../hooks/web3";
 import CandidateDetails from "./CandidateDetails";
-
+import { isAdmin, isVoter } from "../hooks/accountvalidation";
+import { fetchCandidates } from "../hooks/contractmethods";
 function Home() {
   const [currentAccount, setCurrentAccount] = useState(null);
   const [candidateID, setCandidateID] = useState("");
@@ -14,33 +15,7 @@ function Home() {
   const [candidates, setCandidates] = useState([]);
 
   let navigate = useNavigate();
-  const fetchCandidates = async () => {
-    try {
-      const candidates = await contract.methods.getAllCandidates().call();
-      return candidates;
-    } catch (error) {
-      console.error("Error fetching candidates:", error);
-      return [];
-    }
-  };
-  let voter = async () => {
-    const accounts = await window.ethereum.request({
-      method: "eth_requestAccounts",
-    });
-    setCurrentAccount(accounts[0]);
-    const validate = await contract.methods
-      .isVoter()
-      .call({ from: accounts[0] });
-    return validate;
-  };
-  let admin = async () => {
-    const accounts = await window.ethereum.request({
-      method: "eth_requestAccounts",
-    });
-    setCurrentAccount(accounts[0]);
-    const validate = await contract.methods.isAdmin(accounts[0]).call();
-    return validate;
-  };
+  
   useEffect(() => {
     const init = async () => {
       try {
@@ -54,11 +29,11 @@ function Home() {
         console.error("Error connecting to MetaMask:", error);
       }
     };
-    admin()?.then((value) => {
+    isAdmin()?.then((value) => {
       if (value) {
         navigate("/admin");
       } else {
-        voter()?.then((value) => {
+        isVoter()?.then((value) => {
           if (!value) {
             navigate("/registervoter");
           }
@@ -68,11 +43,11 @@ function Home() {
 
     init();
     window.ethereum?.on("accountsChanged", (accounts) => {
-      admin()?.then((value) => {
+      isAdmin()?.then((value) => {
         if (value) {
           navigate("/admin");
         } else {
-          voter()?.then((value) => {
+          isVoter()?.then((value) => {
             if (!value) {
               navigate("/registervoter");
             }
@@ -83,7 +58,7 @@ function Home() {
     });
 
     return () => {
-      window.ethereum?.removeListener("accountsChanged", () => {});
+      window.ethereum?.removeListener("accountsChanged", () => { });
     };
   }, []);
 

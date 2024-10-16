@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import contract from "../hooks/web3";
 import { useNavigate } from "react-router-dom";
+import { isAdmin } from "../hooks/accountvalidation";
+import { fetchVoters } from "../hooks/contractmethods";
 function Admin() {
   const [isadmin, setisadmin] = useState(false);
   const [currentAccount, setCurrentAccount] = useState(null);
@@ -11,41 +13,31 @@ function Admin() {
   const [candidateNewParty, setCandidateNewParty] = useState("");
   const [voterAddress, setVoterAddress] = useState(""); // State for voter address
   const navigate = useNavigate();
-  let admin = async () => {
-    const accounts = await window.ethereum.request({
-      method: "eth_requestAccounts",
-    });
-    const validate = await contract.methods.isAdmin(accounts[0]).call();
-    setCurrentAccount(accounts[0]);
-    return validate;
-  };
+
   const [voters, setVoters] = useState([]);
-  const fetchVoters = async () => {
-    try {
-      const voters = await contract.methods.getAllVoters().call();
-      return voters;
-    } catch (error) {
-      console.error("Error fetching candidates:", error);
-      return [];
-    }
-  };
+
   const setAuthorizedVoters = async () => {
     const fetchedVoters = await fetchVoters();
     setVoters(fetchedVoters.filter((voter) => (!voter.authorized && voter.exists)));
     console.log(fetchedVoters.filter((voter) => (!voter.authorized)));
   }
   useEffect(() => {
-    admin()?.then((value) => {
+    isAdmin()?.then(async (value) => {
       console.log(value);
       setisadmin(value);
       setAuthorizedVoters();
       if (!value) {
         alert("You Are Not Authorized");
         navigate("/");
+      } else {
+        const accounts = await window.ethereum.request({
+          method: "eth_requestAccounts",
+        });
+        setCurrentAccount(accounts[0])
       }
     });
     window.ethereum?.on("accountsChanged", (accounts) => {
-      admin()?.then((value) => {
+      isAdmin()?.then((value) => {
         console.log(value);
         setisadmin(value);
         if (!value) {

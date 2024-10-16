@@ -21,8 +21,6 @@ contract Voting {
     }
 
     mapping(uint256 => Candidate) public candidates;
-    mapping(address => bool) public hasVoted;
-    mapping(address => bool) public authorizedVoters;
     mapping(address => Voter) public voters;
 
     // Declare an array to store voter addresses
@@ -31,6 +29,16 @@ contract Voting {
     uint256 public candidateCount;
     uint256 public voterCount;
     address private admin;
+
+    // Events for tracking actions
+    event CandidateAdded(uint256 indexed candidateId, string name, string party);
+    event VoterRegistered(address indexed voterAddress, string name);
+    event VoterAuthorized(address indexed voterAddress);
+    event VoterRevoked(address indexed voterAddress);
+    event VoteCast(address indexed voter, uint256 indexed candidateId);
+    event VoteFailed(address indexed voter, string reason);
+    event CandidateUpdated(uint256 indexed candidateId, string newName, string newParty);
+    event CandidateRemoved(uint256 indexed candidateId);
 
     constructor(string[][] memory candidateNames) {
         admin = msg.sender;
@@ -58,6 +66,7 @@ contract Voting {
             candidateCount,
             true
         ); // Mark candidate as existing
+        emit CandidateAdded(candidateCount, name, party); // Emit event
         candidateCount++;
     }
 
@@ -86,6 +95,7 @@ contract Voting {
 
         // Add the voter's address to the array
         voterAddresses.push(msg.sender);
+        emit VoterRegistered(msg.sender, name); // Emit event
 
         voterCount++;
     }
@@ -94,16 +104,16 @@ contract Voting {
         require(isAdmin(msg.sender), "Only admin can authorize voters");
         require(voters[voter].exists, "Voter does not exist");
 
-        authorizedVoters[voter] = true;
         voters[voter].authorized = true;
+        emit VoterAuthorized(voter); // Emit event
     }
 
     function revokeVoter(address voter) public {
         require(isAdmin(msg.sender), "Only admin can revoke voter");
         require(voters[voter].exists, "Voter does not exist");
 
-        authorizedVoters[voter] = false;
         voters[voter].authorized = false;
+        emit VoterRevoked(voter); // Emit event
     }
 
     function vote(uint256 candidateId) public {
@@ -118,6 +128,8 @@ contract Voting {
 
         candidates[candidateId].votes += 1;
         voters[msg.sender].hasVoted = true;
+        
+        emit VoteCast(msg.sender, candidateId); // Emit event for successful vote
     }
 
     function totalVotesFor(uint256 candidateId) public view returns (uint256) {
@@ -136,6 +148,7 @@ contract Voting {
         require(bytes(newName).length > 0, "New name cannot be empty");
 
         candidates[candidateId].name = newName;
+        emit CandidateUpdated(candidateId, newName, candidates[candidateId].party); // Emit event
     }
 
     function updateCandidateParty(
@@ -147,6 +160,7 @@ contract Voting {
         require(bytes(newParty).length > 0, "New party cannot be empty");
 
         candidates[candidateId].party = newParty;
+        emit CandidateUpdated(candidateId, candidates[candidateId].name, newParty); // Emit event
     }
 
     function removeCandidate(uint256 candidateId) public {
@@ -154,7 +168,9 @@ contract Voting {
         require(candidates[candidateId].exists, "Candidate does not exist");
 
         delete candidates[candidateId];
+        emit CandidateRemoved(candidateId); // Emit event
     }
+
     function removeByValue(address value) public {
         for (uint i = 0; i < voterAddresses.length; i++) {
             if (voterAddresses[i] == value) {
@@ -169,6 +185,7 @@ contract Voting {
         }
         revert("Value not found in the array");
     }
+
     function removeVoter(address voter) public {
         require(isAdmin(msg.sender), "Only admin can remove voters");
         require(voters[voter].exists, "Voter does not exist");
@@ -179,12 +196,6 @@ contract Voting {
         // Delete the voter's record from the mapping
         delete voters[voter];
     }
-    // function removeVoter(address voter) public {
-    //     require(isAdmin(msg.sender), "Only admin can remove voters");
-    //     require(voters[voter].exists, "Voter does not exist");
-    //     // delete voterAddresses.;
-    //     delete voters[voter];
-    // }
 
     function getAllCandidates() public view returns (Candidate[] memory) {
         Candidate[] memory result = new Candidate[](candidateCount);

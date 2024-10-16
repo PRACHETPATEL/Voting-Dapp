@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import contract from "../hooks/web3";
 import { useNavigate } from "react-router-dom";
+import { isVoter,isAdmin } from "../hooks/accountvalidation";
 function VoterRegistration() {
   const [currentAccount, setCurrentAccount] = useState(null);
   const [name, setName] = useState("");
@@ -65,7 +66,7 @@ function VoterRegistration() {
       }
     }
   };
-
+  
   useEffect(() => {
     const setAccount = async () => {
       const accounts = await window.ethereum.request({
@@ -73,8 +74,30 @@ function VoterRegistration() {
       });
       setCurrentAccount(accounts[0]);
     };
+    isAdmin()?.then((value) => {
+      if (value) {
+        navigate("/admin");
+      } else {
+        isVoter()?.then((value) => {
+          if (value) {
+            navigate("/");
+          }
+        });
+      }
+    });
     setAccount();
     window.ethereum?.on("accountsChanged", (accounts) => {
+      isAdmin()?.then((value) => {
+        if (value) {
+          navigate("/admin");
+        } else {
+          isVoter()?.then((value) => {
+            if (value) {
+              navigate("/");
+            }
+          });
+        }
+      });
       setCurrentAccount(accounts[0]);
     });
 
